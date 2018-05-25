@@ -1,0 +1,53 @@
+import pandas as pd
+import numpy as np
+import os
+from sklearn import preprocessing
+from sklearn.model_selection import StratifiedKFold,KFold,ShuffleSplit
+import cntk as c
+import matplotlib.pyplot as plt
+from keras import backend as c
+from keras import layers
+from keras.models import Sequential
+from keras.layers.core import Dense, Dropout, Activation, Flatten
+from keras.layers.convolutional import Conv1D, MaxPooling1D
+from keras.optimizers import SGD, Adam
+from keras import regularizers
+
+x_train= np.loadtxt('C:/Users/Devanshu/Desktop/faltu/data without misslabel/train_test_without_miss_normalize.csv', delimiter=',', dtype='float32')
+x_train_label= np.loadtxt('C:/Users/Devanshu/Desktop/faltu/data without misslabel/label_encoded_train.csv', delimiter=',', dtype='float32')
+x_test_label= np.loadtxt('C:/Users/Devanshu/Desktop/faltu/data without misslabel/label_encoded_test.csv', delimiter=',', dtype='float32')
+print(x_train.shape)
+print(x_train_label.shape)
+print(x_test_label.shape)
+
+train= x_train[0:125973,:]
+test= x_train[125973:,:]
+train_label= x_train_label
+test_label= x_test_label
+print(train.shape, train_label.shape,test.shape, test_label.shape)
+#print(train.shape, train_label.shape,test.shape)
+
+train= train.reshape(125973,5,8)
+test= test.reshape(18793,5,8)
+input_dimension= 40
+
+# model
+
+model= Sequential()
+model.add(Conv1D(strides=1, input_shape=(5, 8), padding="same", activation="tanh", filters=32, kernel_size=2, name="layer1"))
+pool1= model.add(MaxPooling1D(pool_size=2, strides=None, padding='same'))
+model.add(Conv1D(strides=1, padding="same", activation="tanh", filters=16, kernel_size=1, name="layer2"))
+model.add(Dropout(0.2))
+model.add(Conv1D(strides=1, padding="same", activation="tanh", filters=8, kernel_size=1,name="layer3"))
+pool2= model.add(MaxPooling1D(pool_size=2, strides=None, padding='same'))
+model.add(Flatten())
+model.add(Dense(128, input_dim=input_dimension, activation='relu',kernel_regularizer=regularizers.l2(0.01)))
+model.add(Dropout(0.2))
+model.add(Dense(5, activation='softmax'))
+adam=Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
+model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['acc'])
+print(model.summary())
+model.fit(train, train_label, epochs=10, batch_size=None)
+
+predict= model.predict(test)
+scores = model.evaluate(test, test_label)

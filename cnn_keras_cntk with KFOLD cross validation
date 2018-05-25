@@ -1,0 +1,57 @@
+import pandas as pd
+import numpy as np
+import os
+from sklearn import preprocessing
+from sklearn.model_selection import StratifiedKFold
+import cntk as c
+import matplotlib.pyplot as plt
+from keras import backend as c
+from keras.models import Sequential
+from keras.layers.core import Dense, Dropout, Activation, Flatten
+from keras.layers.convolutional import Conv1D, MaxPooling1D
+from keras.optimizers import SGD
+
+x_train= np.loadtxt('filepath.csv', delimiter=',', dtype='float64')
+x_train.shape
+
+a= x_train[:,0:49]
+a=a.reshape(144766,7,7)
+b= x_train[:,49]
+print(a.shape, b.shape)
+
+kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+cvscores = []
+
+input_dimension= 49
+data_type= 'float32'
+num_classes=5
+epoch= 100
+learning_rate = 0.0025
+momentum = 0.85
+dropout_rate = 0.2
+
+for train, test in kfold.split(a, b):
+    model= Sequential()
+   
+   #if first layer of the network is convo layer then we have to give input_shape to the layer as well. Following layers will manage themselves.
+    model.add(Conv1D(nb_filter=32,filter_length=3, strides=1,input_shape=(7,7),padding='same', dilation_rate=1, activation='relu', use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros',kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None))
+    model.add(Conv1D(nb_filter=16, filter_length=1, strides=2,padding='same', dilation_rate=1, activation='relu', use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None))
+   
+   # Pooling layer to reduce the output number. Different pooling layers are available to implement 
+    model.add(MaxPooling1D(pool_size=2, strides=None, padding='valid'))
+   
+   # makes model to learn out of the way by dropping data on random points
+    model.add(Dropout(dropout_rate))
+    # flatten the output to array before passing over to dense layer
+    model.add(Flatten())
+    # fully connected layer
+    model.add(Dense(128, input_dim=input_dimension, activation='relu'))
+    model.add(Dense(1, activation='softmax'))
+    sgd = SGD(lr=learning_rate, momentum=momentum)
+    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['acc'])
+
+    model.fit(a1[train], b[train], epochs=150, batch_size=128)
+    
+    scores = model.evaluate(a1[test], b[test], verbose=0)
+    print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+    cvscores.append(scores[1] * 100)
